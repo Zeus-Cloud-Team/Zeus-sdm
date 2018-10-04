@@ -100,6 +100,7 @@ export function machine(
             SetAtomistTeamInApplicationYml,
             TransformSeedToCustomProject,
             CustomizeManifest,
+            SendHowTo,
         ],
     });
 
@@ -129,4 +130,8 @@ const CustomizeManifest: CodeTransform<SpringProjectCreationParameters> = async 
     }
     await manifest.replaceAll("funky-spring", ci.parameters.target.repoRef.repo);
     await ci.addressChannels(`Updating your manifest.yml`);
+};
+
+const SendHowTo: CodeTransform<SpringProjectCreationParameters> = async (p, ci) => {
+    await ci.addressChannels(`:information_source: Please refer to the steps in the README at ${ci.parameters.target.repoRef.url}/blob/master/README.md`);
 };
