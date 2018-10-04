@@ -2,6 +2,7 @@ import {
     AutoCodeInspection,
     Autofix,
     Build,
+    CodeTransform,
     GitHubRepoRef,
     goalContributors,
     goals,
@@ -80,12 +81,30 @@ export function machine(
         intent: "create spring",
         description: "Create a new Java Spring Boot REST service",
         parameters: SpringProjectCreationParameterDefinitions,
-        startingPoint: GitHubRepoRef.from({ owner: "atomist-seeds", repo: "spring-rest", branch: "master" }),
+        startingPoint: GitHubRepoRef.from({ owner: "Zeus-Cloud-Team", repo: "spring-rest", branch: "master" }),
         transform: [
             ReplaceReadmeTitle,
             SetAtomistTeamInApplicationYml,
             TransformSeedToCustomProject,
         ],
+    });
+
+    sdm.addGeneratorCommand<SpringProjectCreationParameters>({
+        name: "funky-create-spring",
+        intent: "funky create spring",
+        description: "Create a new Java Spring Boot REST service, with funkiness",
+        parameters: SpringProjectCreationParameterDefinitions,
+        startingPoint: GitHubRepoRef.from({ owner: "Zeus-Cloud-Team", repo: "spring-rest", branch: "master" }),
+        transform: [
+            ReplaceReadmeTitle,
+            SetAtomistTeamInApplicationYml,
+            TransformSeedToCustomProject,
+            CustomizeManifest,
+        ],
+    });
+
+    sdm.addChannelLinkListener(async cli => {
+        return cli.addressChannels("I see a new repo :wave:");
     });
 
     sdm.addCommand(ListBranchDeploys);
@@ -95,3 +114,19 @@ export function machine(
 
     return sdm;
 }
+
+/**
+ * Customize the Cloud Foundry manifest to have the correct app name
+ * @param {Project} p
+ * @param {ParametersInvocation<SpringProjectCreationParameters>} ci
+ * @return {Promise<void>}
+ * @constructor
+ */
+const CustomizeManifest: CodeTransform<SpringProjectCreationParameters> = async (p, ci) => {
+    const manifest = await p.getFile("manifest.yml");
+    if (!manifest) {
+        await ci.addressChannels(`This project has no Cloud Foundry manifest. The seed at ${p.id.url} is invalid`);
+    }
+    await manifest.replaceAll("funky-spring", ci.parameters.target.repoRef.repo);
+    await ci.addressChannels(`Updating your manifest.yml`);
+};
